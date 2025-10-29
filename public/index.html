@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Tower - Idle TD</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #1a1a2e;
+      color: #eee;
+      overflow: hidden;
+    }
+
+    #game-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      background: linear-gradient(to bottom, #0f3460 0%, #1a1a2e 100%);
+    }
+
+    #game-field {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #game-canvas {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-origin: center center;
+    }
+
+    #tower {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #e94560, #c73650);
+      border: 4px solid #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: bold;
+      font-size: 40px;
+      z-index: 10;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 30px rgba(233, 69, 96, 0.6);
+    }
+
+    /* タワーの射程範囲を可視化（オプション） */
+    #tower-range {
+      position: absolute;
+      border: 2px dashed rgba(78, 205, 196, 0.3);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .enemy {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+      border: 2px solid #fff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.1s;
+      z-index: 5;
+      transform: translate(-50%, -50%);
+      line-height: 1.2;
+      white-space: pre-line;
+      text-align: center;
+    }
+
+    .enemy:hover {
+      transform: translate(-50%, -50%) scale(1.2);
+      box-shadow: 0 0 15px rgba(255, 107, 107, 0.8);
+    }
+
+    .enemy .hp-bar {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: 4px;
+      background: #333;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .enemy .hp-fill {
+      height: 100%;
+      background: #4ecdc4;
+      transition: width 0.2s;
+    }
+
+    /* 敵の種類別スタイル */
+    .enemy-ranged {
+      background: linear-gradient(135deg, #9b59b6, #8e44ad) !important;
+      border-color: #fff !important;
+      box-shadow: 0 0 10px rgba(155, 89, 182, 0.6);
+    }
+
+    .enemy-miniboss {
+      background: linear-gradient(135deg, #f39c12, #e67e22) !important;
+      border-width: 3px !important;
+      border-color: #fff !important;
+      box-shadow: 0 0 20px rgba(243, 156, 18, 0.8);
+      animation: miniboss-pulse 2s infinite;
+    }
+
+    .enemy-boss {
+      background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+      border-width: 4px !important;
+      border-color: #ffd700 !important;
+      box-shadow: 0 0 30px rgba(231, 76, 60, 1);
+      animation: boss-pulse 1.5s infinite;
+    }
+
+    @keyframes miniboss-pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.05); }
+    }
+
+    @keyframes boss-pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 30px rgba(231, 76, 60, 1); }
+      50% { transform: translate(-50%, -50%) scale(1.1); box-shadow: 0 0 50px rgba(231, 76, 60, 1.5); }
+    }
+
+    /* レーザーエフェクト */
+    .laser-effect {
+      position: absolute;
+      height: 3px;
+      background: linear-gradient(90deg, rgba(78, 205, 196, 0.8), rgba(78, 205, 196, 1), rgba(78, 205, 196, 0.8));
+      box-shadow: 0 0 10px rgba(78, 205, 196, 0.8), 0 0 20px rgba(78, 205, 196, 0.6);
+      z-index: 8;
+      transform-origin: 0 50%;
+      pointer-events: none;
+    }
+
+    .laser-cursor-attack {
+      background: linear-gradient(90deg, rgba(245, 87, 108, 0.8), rgba(245, 87, 108, 1), rgba(245, 87, 108, 0.8)) !important;
+      box-shadow: 0 0 15px rgba(245, 87, 108, 1), 0 0 30px rgba(245, 87, 108, 0.8) !important;
+      height: 5px !important;
+    }
+
+    /* 上部HUD（コンパクト） */
+    #info-panel {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 64px;
+      background: rgba(26, 26, 46, 0.85);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 2px solid #16213e;
+      z-index: 20;
+      backdrop-filter: blur(4px);
+    }
+
+    .info-row { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .info-label {
+      font-size: 16px;
+      color: #a0a0a0;
+    }
+
+    .info-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #4ecdc4;
+    }
+
+    #tower-hp-bar {
+      width: 200px;
+      height: 20px;
+      background: #333;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 2px solid #fff;
+    }
+
+    #tower-hp-fill {
+      height: 100%;
+      background: linear-gradient(to right, #e94560, #c73650);
+      transition: width 0.3s;
+    }
+
+    #tower-hp-text {
+      position: absolute;
+      width: 200px;
+      text-align: center;
+      font-size: 14px;
+      margin-top: 22px;
+      color: #fff;
+    }
+
+    .button {
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+    }
+
+    .button-primary {
+      background: linear-gradient(135deg, #4ecdc4, #44a08d);
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(78, 205, 196, 0.4);
+    }
+
+    .button-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(78, 205, 196, 0.6);
+    }
+
+    .button-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .button-skill {
+      background: linear-gradient(135deg, #f093fb, #f5576c);
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+    }
+
+    .button-skill:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
+    }
+
+    .button-skill:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .cursor-attack-active {
+      animation: cursor-glow 1s infinite;
+    }
+
+    @keyframes cursor-glow {
+      0%, 100% { box-shadow: 0 0 15px rgba(245, 87, 108, 0.8); }
+      50% { box-shadow: 0 0 30px rgba(245, 87, 108, 1); }
+    }
+
+    /* ゲーム終了オーバーレイ */
+    #game-over {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    #game-over.show { display: flex; }
+    .game-over-content {
+      background: #1a1a2e;
+      border: 2px solid #4ecdc4;
+      border-radius: 12px;
+      padding: 32px;
+      max-width: 500px;
+      text-align: center;
+    }
+    .game-over-title { font-size: 28px; color: #e94560; margin-bottom: 24px; }
+    .game-over-stat { margin: 12px 0; color: #eee; }
+    .game-over-buttons { display: flex; gap: 16px; margin-top: 24px; justify-content: center; }
+
+    #wave-status { font-size: 14px; color:#fff; padding: 6px 10px; background: rgba(78,205,196,.25); border-radius:8px; }
+
+    /* フローティング: ウェーブ開始 */
+    /* ウェーブ開始ボタンは廃止 */
+
+    /* サイドパネル（アップグレード） */
+    #upgrade-panel-toggle { position: absolute; top: 80px; right: 20px; z-index: 21; opacity:.2; transition: opacity .2s; }
+    #upgrade-panel-toggle:hover { opacity: 1; }
+    #upgrade-panel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: min(420px, 90vw);
+      height: 100%;
+      background: rgba(16,16,24,0.96);
+      border-left: 2px solid #16213e;
+      transform: translateX(100%);
+      transition: transform .25s ease;
+      z-index: 20;
+      padding: 80px 16px 16px;
+      overflow-y: auto;
+    }
+    #upgrade-panel.open { transform: translateX(0%); }
+    #upgrade-backdrop { position:absolute; inset:0; background: rgba(0,0,0,.35); z-index:19; display:none; }
+    #upgrade-backdrop.show { display:block; }
+    #upgrade-close { position:absolute; top:16px; right:16px; background:#444; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer; }
+    .tabs { display:flex; gap:8px; margin-bottom:8px; }
+    .tab { padding:8px 12px; background:#233; border-radius:8px; cursor:pointer; font-size:12px; }
+    .tab.active { background:#355; }
+    .grid { display:grid; grid-template-columns: repeat(2, minmax(160px, 1fr)); gap:10px; }
+    .up-card { background:#1a1a2e; border:1px solid #233; border-radius:10px; padding:10px; }
+    .up-row { display:flex; justify-content:space-between; align-items:center; gap:6px; }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="info-panel">
+      <div class="info-row">
+        <div class="info-item">
+          <span class="info-label">ウェーブ:</span>
+          <span class="info-value" id="wave-display">1</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">キャッシュ:</span>
+          <span class="info-value" id="cash-display">0</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">コイン:</span>
+          <span class="info-value" id="coin-display">0</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">ジェム:</span>
+          <span class="info-value" id="gem-display">0</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">タワーHP:</span>
+          <div>
+            <div id="tower-hp-bar">
+              <div id="tower-hp-fill"></div>
+            </div>
+            <div id="tower-hp-text">100 / 100</div>
+          </div>
+        </div>
+      </div>
+      <div class="info-row">
+        <div id="wave-status"></div>
+      </div>
+    </div>
+
+    <div id="game-field">
+      <div id="game-canvas">
+        <div id="tower-range"></div>
+        <div id="tower">🗼</div>
+        <!-- 敵は動的に追加される -->
+      </div>
+    </div>
+
+    <!-- ゲーム終了オーバーレイ -->
+    <div id="game-over">
+      <div class="game-over-content">
+        <div class="game-over-title">防衛ライン突破</div>
+        <div class="game-over-stat">ウェーブ進行数: <span id="game-over-wave">-</span></div>
+        <div class="game-over-stat">過去最高ウェーブ: <span id="game-over-best">-</span></div>
+        <div class="game-over-stat">倒された敵: <span id="game-over-killer">-</span></div>
+        <div class="game-over-stat">今回獲得コイン: <span id="game-over-coin">-</span></div>
+        <div class="game-over-buttons">
+          <button id="retry-btn" class="button button-primary">リトライ</button>
+          <button id="home-btn" class="button button-primary">ホームへ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+
+    <button id="upgrade-panel-toggle" class="button button-primary" title="Uキーでも開閉">アップグレード</button>
+    <div id="upgrade-backdrop"></div>
+  <div id="upgrade-panel">
+      <button id="upgrade-close">閉じる</button>
+    <div class="tabs">
+      <div id="tab-attack" class="tab active">攻撃</div>
+      <div id="tab-defense" class="tab">防御</div>
+    </div>
+    <div id="panel-attack" class="grid">
+        <div class="up-card"><div class="up-row"><div>ダメージ <small>(Lv:<span data-lv="damage">0</span>)</small></div><button class="button button-primary upgrade-btn" data-up="damage" data-up-name="ダメージ">価格:<span data-cost="damage">-</span></button></div></div>
+        <div class="up-card"><div class="up-row"><div>攻撃速度 <small>(Lv:<span data-lv="attackSpeed">0</span>)</small></div><button class="button button-primary upgrade-btn" data-up="attackSpeed" data-up-name="攻撃速度">価格:<span data-cost="attackSpeed">-</span></button></div></div>
+        <div class="up-card"><div class="up-row"><div>クリ率 <small>(Lv:<span data-lv="critChance">0</span>)</small></div><button class="button button-primary upgrade-btn" data-up="critChance" data-up-name="クリ率">価格:<span data-cost="critChance">-</span></button></div></div>
+        <div class="up-card"><div class="up-row"><div>クリダメ <small>(Lv:<span data-lv="critDamage">0</span>)</small></div><button class="button button-primary upgrade-btn" data-up="critDamage" data-up-name="クリダメ">価格:<span data-cost="critDamage">-</span></button></div></div>
+        <div class="up-card"><div class="up-row"><div>射程 <small>(Lv:<span data-lv="range">0</span>)</small></div><button class="button button-primary upgrade-btn" data-up="range" data-up-name="射程">価格:<span data-cost="range">-</span></button></div></div>
+        <div class="up-card"><div class="up-row"><div>距離倍率 <small>(Lv:<span data-lv="damagePerMeter">0</span>)</small></div><button class="button button-primary upgrade-btn" data-up="damagePerMeter" data-up-name="距離倍率">価格:<span data-cost="damagePerMeter">-</span></button></div></div>
+        <div class="up-card"><div class="up-row"><div>マルチ率 <small>(Lv:<span data-lv="multishotChance">0</span>)</small></div><button class="button button-primary upgrade-btn" data-up="multishotChance" data-up-name="マルチ率">価格:<span data-cost="multishotChance">-</span></button></div></div>
+        <div class="up-card"><div class="up-row"><div>マルチ数 <small>(Lv:<span data-lv="multishotCount">0</span>)</small></div><button class="button button-primary upgrade-btn" data-up="multishotCount" data-up-name="マルチ数">価格:<span data-cost="multishotCount">-</span></button></div></div>
+    </div>
+    <div id="panel-defense" class="grid" style="display:none">
+        <div class="up-card"><div class="up-row"><div>ヘルス <small>(Lv:<span data-lv="health">0</span>)</small></div><button class="button button-primary upgrade-btn" data-up="health" data-up-name="ヘルス">価格:<span data-cost="health">-</span></button></div></div>
+        <div class="up-card"><div class="up-row"><div>回復 <small>(Lv:<span data-lv="healthRegen">0</span>)</small></div><button class="button button-primary upgrade-btn" data-up="healthRegen" data-up-name="回復">価格:<span data-cost="healthRegen">-</span></button></div></div>
+        <div class="up-card"><div class="up-row"><div>防御% <small>(Lv:<span data-lv="defenseChance">0</span>)</small></div><button class="button button-primary upgrade-btn" data-up="defenseChance" data-up-name="防御%">価格:<span data-cost="defenseChance">-</span></button></div></div>
+        <div class="up-card"><div class="up-row"><div>絶対防御 <small>(Lv:<span data-lv="absoluteDefense">0</span>)</small></div><button class="button button-primary upgrade-btn" data-up="absoluteDefense" data-up-name="絶対防御">価格:<span data-cost="absoluteDefense">-</span></button></div></div>
+        <div class="up-card"><div class="up-row"><div>とげ <small>(Lv:<span data-lv="thorns">0</span>)</small></div><button class="button button-primary upgrade-btn" data-up="thorns" data-up-name="とげ">価格:<span data-cost="thorns">-</span></button></div></div>
+        <div class="up-card"><div class="up-row"><div>ライフスティール <small>(Lv:<span data-lv="lifesteal">0</span>)</small></div><button class="button button-primary upgrade-btn" data-up="lifesteal" data-up-name="ライフスティール">価格:<span data-cost="lifesteal">-</span></button></div></div>
+        <div class="up-card"><div class="up-row"><div>ノック率 <small>(Lv:<span data-lv="knockbackChance">0</span>)</small></div><button class="button button-primary upgrade-btn" data-up="knockbackChance" data-up-name="ノック率">価格:<span data-cost="knockbackChance">-</span></button></div></div>
+        <div class="up-card"><div class="up-row"><div>ノック力 <small>(Lv:<span data-lv="knockbackPower">0</span>)</small></div><button class="button button-primary upgrade-btn" data-up="knockbackPower" data-up-name="ノック力">価格:<span data-cost="knockbackPower">-</span></button></div></div>
+    </div>
+  </div>
+
+  <script src="/client.js"></script>
+</body>
+</html>

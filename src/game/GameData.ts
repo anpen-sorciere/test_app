@@ -37,6 +37,8 @@ export interface GameData {
   startTime: number;
   currentTime: number;
   isPaused: boolean;
+  money: number; // 資金
+  floors: number; // フロア数
 }
 
 // デフォルトのゲーム設定
@@ -64,5 +66,7 @@ export const INITIAL_GAME_DATA: GameData = {
   config: { ...DEFAULT_GAME_CONFIG },
   startTime: 0,
   currentTime: 0,
-  isPaused: false
+  isPaused: false,
+  money: 0,
+  floors: 1
 };

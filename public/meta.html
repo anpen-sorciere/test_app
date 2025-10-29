@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>メタ強化</title>
+  <style>
+    body { margin:0; font-family: Arial, sans-serif; background:#0f3460; color:#eef; }
+    .container { min-height:100vh; display:flex; flex-direction:column; gap:24px; align-items:center; padding:32px 16px; }
+    .row { display:flex; flex-wrap:wrap; gap:16px; justify-content:center; }
+    .card { background:#1a1a2e; border:1px solid #233; border-radius:12px; padding:20px; min-width:260px; box-shadow:0 6px 24px rgba(0,0,0,0.2); }
+    .btn { display:inline-block; padding:10px 16px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; color:#fff; text-decoration:none; }
+    .btn-back { background:#444; }
+    .btn-up { background: linear-gradient(135deg, #4ecdc4, #44a08d); }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
+    .stat { background:#16213e; border:1px solid #233; border-radius:10px; padding:10px 14px; font-size:14px; }
+    h2 { margin:0 0 8px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="display:flex; gap:12px; width:100%; max-width:960px; align-items:center; justify-content:space-between;">
+      <h2 style="margin:0">メタ強化（恒久）</h2>
+      <div>
+        <a class="btn btn-back" href="/">ホームへ</a>
+      </div>
+    </div>
+
+    <div class="row" id="wallet" style="display:none">
+      <div class="stat">コイン: <span id="meta-coin">0</span></div>
+      <div class="stat">ジェム: <span id="meta-gem">0</span></div>
+    </div>
+
+    <div class="row" id="meta-grid">
+      <div class="card">
+        <div style="font-weight:bold">ダメージ</div>
+        <div>レベル: <span data-lv="damage">0</span></div>
+        <div>コスト: <span data-cost-coin="damage">-</span> コイン</div>
+        <button class="btn btn-up" data-meta="damage">購入</button>
+      </div>
+      <div class="card">
+        <div style="font-weight:bold">ヘルス</div>
+        <div>レベル: <span data-lv="health">0</span></div>
+        <div>コスト: <span data-cost-coin="health">-</span> コイン</div>
+        <button class="btn btn-up" data-meta="health">購入</button>
+      </div>
+      <div class="card">
+        <div style="font-weight:bold">射程</div>
+        <div>レベル: <span data-lv="range">0</span></div>
+        <div>コスト: <span data-cost-coin="range">-</span> コイン</div>
+        <button class="btn btn-up" data-meta="range">購入</button>
+      </div>
+      <div class="card">
+        <div style="font-weight:bold">クリティカル率</div>
+        <div>レベル: <span data-lv="critChance">0</span></div>
+        <div>コスト: <span data-cost-gem="critChance">-</span> ジェム</div>
+        <button class="btn btn-up" data-meta="critChance">購入</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/meta.js"></script>
+</body>
+</html>

@@ -155,6 +155,43 @@ export class GameLogic {
   }
 
   /**
+   * 資金を増やす（1秒ごとにフロア数に応じて増加）
+   */
+  public addMoney(): void {
+    // フロア数 * 10 を1秒ごとに増加（例: 1フロア = 10円/秒、2フロア = 20円/秒）
+    const incomePerSecond = this.gameData.floors * 10;
+    this.gameData.money += incomePerSecond;
+  }
+
+  /**
+   * 新しいフロアを購入する
+   * @param cost 購入価格（デフォルト: 5000）
+   * @returns 購入成功したかどうか
+   */
+  public buyFloor(cost: number = 5000): boolean {
+    if (this.gameData.money >= cost) {
+      this.gameData.money -= cost;
+      this.gameData.floors += 1;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * 資金を取得する
+   */
+  public getMoney(): number {
+    return this.gameData.money;
+  }
+
+  /**
+   * フロア数を取得する
+   */
+  public getFloors(): number {
+    return this.gameData.floors;
+  }
+
+  /**
    * ゲームループの更新処理
    */
   public update(): void {
@@ -162,6 +199,7 @@ export class GameLogic {
       this.updateGameTime();
       this.checkTimeLimit();
       this.checkVictoryCondition();
+      this.addMoney(); // 資金を自動的に増加
     }
   }
 }

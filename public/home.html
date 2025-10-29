@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>タワー防衛 - ホーム</title>
+  <!-- Simple inline styles for now -->
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #0f3460; color: #eef; }
+    .container { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+    h1 { margin: 0 0 8px 0; font-size: 32px; }
+    p { margin: 0 0 16px 0; opacity: 0.8; }
+    .row { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+    .card { background: #1a1a2e; border: 1px solid #233; border-radius: 12px; padding: 20px; min-width: 260px; box-shadow: 0 6px 24px rgba(0,0,0,0.2); }
+    .btn { display: inline-block; padding: 12px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-decoration: none; color: #fff; transition: transform .15s, box-shadow .15s; }
+    .btn-primary { background: linear-gradient(135deg, #4ecdc4, #44a08d); box-shadow: 0 4px 15px rgba(78,205,196,.4); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(78,205,196,.6); }
+    .btn-secondary { background: linear-gradient(135deg, #f093fb, #f5576c); box-shadow: 0 4px 15px rgba(245,87,108,.4); }
+    .btn-secondary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(245,87,108,.6); }
+    .stats { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+    .stat { background:#16213e; border:1px solid #233; border-radius:10px; padding:10px 14px; font-size:14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="text-align:center">
+      <h1>タワー防衛</h1>
+      <p>コインとジェムで初期能力を強化し、ウェーブ記録を伸ばそう。</p>
+    </div>
+
+    <div class="row">
+      <div class="card">
+        <h3 style="margin-top:0">バトル</h3>
+        <p>360度から迫る敵を迎撃し、キャッシュを集めてその場強化。</p>
+        <a class="btn btn-primary" href="/play">バトルを開始</a>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">ワークショップ（恒久強化）</h3>
+        <p>コイン/ジェムを使って恒久的な初期能力を強化。</p>
+        <a class="btn btn-secondary" href="/meta">初期能力を強化</a>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">カード</h3>
+        <p>カードデッキの編集（準備中）。</p>
+        <a class="btn btn-back" href="/cards">カード画面へ</a>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">研究所</h3>
+        <p>研究による恒久効果（準備中）。</p>
+        <a class="btn btn-back" href="/lab">研究所へ</a>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">ストア</h3>
+        <p>限定アイテムやジェム購入（準備中）。</p>
+        <a class="btn btn-back" href="/store">ストアへ</a>
+      </div>
+    </div>
+
+    <div class="stats" id="home-stats" style="display:none">
+      <div class="stat">過去最高ウェーブ: <span id="home-best">0</span></div>
+      <div class="stat">コイン: <span id="home-coin">0</span></div>
+      <div class="stat">ジェム: <span id="home-gem">0</span></div>
+    </div>
+
+    <!-- Debug tools (development only) -->
+    <div id="debug-tools" style="margin-top:16px; display:flex; gap:12px; align-items:center;">
+      <span style="opacity:.7; font-size:12px;">[DEBUG] 永続化データのリセット</span>
+      <button id="btn-reset-save" class="btn btn-back">保存をリセット</button>
+      <span id="reset-result" style="font-size:12px; opacity:.8;"></span>
+    </div>
+  </div>
+
+  <script>
+    // 軽い統計表示（接続できない場合は非表示のまま）
+    (function(){
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(protocol + '//' + location.host);
+      ws.onmessage = (e) => {
+        try {
+          const m = JSON.parse(e.data);
+          if (!m || !m.data) return;
+          const s = m.data;
+          const statsEl = document.getElementById('home-stats');
+          const best = document.getElementById('home-best');
+          const coin = document.getElementById('home-coin');
+          const gem = document.getElementById('home-gem');
+          if (s.stats && best) best.textContent = s.stats.bestWave ?? 0;
+          if (coin) coin.textContent = s.coin ?? 0;
+          if (gem) gem.textContent = s.gem ?? 0;
+          statsEl && (statsEl.style.display = 'flex');
+        } catch(_){}
+        ws.close();
+      };
+      ws.onerror = () => ws.close();
+    })();
+
+    // Debug reset button
+    (function(){
+      const btn = document.getElementById('btn-reset-save');
+      const result = document.getElementById('reset-result');
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        try {
+          result.textContent = 'リセット中...';
+          const res = await fetch('/debug/reset-save', { method: 'POST' });
+          const json = await res.json().catch(() => ({}));
+          if (res.ok && json.ok) {
+            result.textContent = '保存をリセットしました。';
+          } else {
+            result.textContent = '失敗しました。コンソールを確認してください。';
+          }
+        } catch (e) {
+          result.textContent = 'エラー: ' + (e?.message || e);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
